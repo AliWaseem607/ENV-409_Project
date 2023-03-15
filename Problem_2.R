@@ -1,3 +1,4 @@
+# install.packages("chron")
 library(chron)
 library(tidyverse)
 
@@ -40,6 +41,7 @@ Month2Season <- function(month) {
   factor(seasons[index], seasons)
 }
 
-
 LUG<-ReadTSeries("./data/LUG.csv")
 RIG<-ReadTSeries("./data/RIG.csv")
+LUG
+
