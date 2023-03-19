@@ -45,3 +45,21 @@ LUG<-ReadTSeries("./data/LUG.csv")
 RIG<-ReadTSeries("./data/RIG.csv")
 LUG
 
+df <- full_join(cbind(site="LUG", LUG),
+                cbind(site="RIG", RIG))
+
+str(df)
+# This operation cuts out the unnecessary columns
+reg_df <- df[, !names(df) %in% c("CPC", "EC", "PREC", "RAD", "TEMP")]
+str(reg_df)
+
+lf <- reg_df %>%
+  gather(variable, value,
+         -c(site, datetime, season, year, month, day, hour, dayofwk, daytype))
+
+ggplot(lf)+                                        # `lf` is the data frame
+  facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
+  geom_line(aes(datetime, value, color=site))+       # plot `value` vs. `time` as lines
+  scale_x_chron()+                                   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1)) # rotate x-axis labels
+
