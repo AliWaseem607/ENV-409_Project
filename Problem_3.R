@@ -60,3 +60,13 @@ theme(axis.text.x=element_text(angle=30, hjust=1)) # rotate x-axis labels
 ggplot(lf) +
   facet_grid(variable ~ site, scale = "free_y") +
   geom_boxplot(aes(month, value), outlier.size = 0.5, outlier.shape = 3)
+
+ggplot(lf) +
+  facet_grid(variable ~ site, scale = "free_y") +
+  geom_boxplot(aes(season, value), outlier.size = 0.5, outlier.shape = 3)
+
+lf %>%
+  filter(site=="LUG" & !is.na(value)) %>%
+  ggplot +
+  facet_grid(variable ~ season, scale = "free_y") +
+  geom_boxplot(aes(daytype, value), outlier.size = 0.5, outlier.shape = 3)
