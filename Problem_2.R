@@ -41,7 +41,90 @@ Month2Season <- function(month) {
   factor(seasons[index], seasons)
 }
 
-LUG<-ReadTSeries("./data/LUG.csv")
-RIG<-ReadTSeries("./data/RIG.csv")
-LUG
+LUG<-ReadTSeries("./data/LUG_2023-04-16.csv")
+RIG<-ReadTSeries("./data/RIG_2023-04-16.csv")
+
+df <- full_join(cbind(site="LUG", LUG),
+                cbind(site="RIG", RIG))
+
+# This operation cuts out the unnecessary columns
+reg_df <- df[, !names(df) %in% c("CPC", "EC", "PREC", "RAD", "TEMP")]
+
+# Set up limit values for 24h limits
+daily.limits <- data.frame(value = c(100, 80, 8, 50),
+                          variable=c("SO2","NO2", "CO", "PM10"))
+
+# Make the df a long format
+lf <- df %>%
+  gather(variable, value,
+         -c(site, datetime, season, year, month, day, hour, dayofwk, daytype))
+
+ggplot(lf)+                                        # `lf` is the data frame
+  facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
+  geom_line(aes(datetime, value, color=site))+       # plot `value` vs. `time` as lines
+  scale_x_chron()+                                   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1)) # rotate x-axis labels
+
+# Let's first plot out the general variables
+ggplot(filter(lf,variable %in% c("PREC", "RAD", "TEMP")))+                                        # `lf` is the data frame
+  facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
+  geom_line(aes(datetime, value, color=site))+       # plot `value` vs. `time` as lines
+  scale_x_chron()+                                   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1))
+
+# Then let's plot out the rest
+ggplot(filter(lf,!variable %in% c("PREC", "RAD", "TEMP")))+                                        # `lf` is the data frame
+  facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
+  geom_line(aes(datetime, value, color=site))+       # plot `value` vs. `time` as lines
+  scale_x_chron()+                                   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1))
+
+daily <- lf %>%
+  filter(variable %in% daily.limits[["variable"]])%>% # Grabs only the needed variables
+  mutate(date = dates(datetime)) %>% # creates a date column
+  group_by(site, date, variable)%>% # groups the data
+  summarize(percent.recovery = length(na.omit(value))/length(value)*1e2,
+            value = mean(value, na.rm=TRUE)) %>%
+  ungroup()
+
+threshold <- 75
+
+daily %>%
+  filter(percent.recovery < threshold) %>%
+  count(site, variable)
+
+daily %>%
+  filter(percent.recovery >= threshold) %>%
+  ggplot+
+  facet_grid(variable~site, scale="free_y")+  
+  geom_line(aes(x=date, y=value, color=site))+
+  geom_hline(data=daily.limits, mapping=aes(yintercept=value), linetype=2)+
+  scale_x_chron(format="%d.%m")+
+  theme(axis.text.x=element_text(angle=30, hjust=1))
+
+O3 <- lf %>%
+  filter(variable == "O3")
+
+O3 %>%
+  ggplot+
+  facet_grid(variable~site, scale="free_y")+
+  geom_line(aes(datetime, value, color=site))+
+  scale_x_chron()+   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1))+
+  geom_hline(aes(yintercept=120), linetype=2)
+
+
+(limits.vec <- with(daily.limits, setNames(value, variable)))
+exceedances <- daily %>%
+  filter(percent.recovery >= threshold &
+           value > limits.vec[as.character(variable)])  
+exceedances %>%
+  count(site, variable)
+
+O3.exceedance <- O3 %>%
+  filter(value > 120) 
+
+O3.exceedance %>%
+  count(site, variable)
+
 
