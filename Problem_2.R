@@ -118,13 +118,31 @@ O3 %>%
 exceedances <- daily %>%
   filter(percent.recovery >= threshold &
            value > limits.vec[as.character(variable)])  
+
 exceedances %>%
   count(site, variable)
 
 O3.exceedance <- O3 %>%
   filter(value > 120) 
 
+# Counts the number of O3 excedances by site
 O3.exceedance %>%
   count(site, variable)
 
+# Prints the dates for the excedances to be reported
+print(exceedances)
 
+# Get the mean of the PM10 and PM2.5
+
+PM10 <- lf %>% # With the long format
+  filter(variable == "PM10") %>% #get the rows where the variable is PM10
+  drop_na() # Get rid of NA values
+mean(PM10$value)
+
+PM2.5 <- lf %>% # With the long format
+  filter(variable == "PM2.5") %>% #get the rows where the variable is PM10
+  drop_na() # Get rid of NA values
+mean(PM2.5$value)
+
+RIG.numeric <- RIG[,sapply(RIG, is.numeric)]
+LUG.numeric <- LUG[,sapply(LUG, is.numeric)]
