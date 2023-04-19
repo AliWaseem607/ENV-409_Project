@@ -146,3 +146,6 @@ mean(PM2.5$value)
 
 RIG.numeric <- RIG[,sapply(RIG, is.numeric)]
 LUG.numeric <- LUG[,sapply(LUG, is.numeric)]
+
+print(colMeans(RIG.numeric, na.rm=T))
+print(colMeans(LUG.numeric, na.rm=T))
