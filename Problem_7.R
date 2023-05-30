@@ -59,6 +59,9 @@ daily.limits <- data.frame(value = c(100, 80, 8, 50),
 
 df7 <- df[, !names(df) %in% c("CPC", "EC", "PREC", "RAD", "TEMP", "CO", "NMVOC", "NOX", "O3","SO2", "NO2")] %>%
         filter(month %in% c("Jan", "Feb", "Mar", "Apr", "May", "Jun"))
+
+df7_all_month <- df[, !names(df) %in% c("CPC", "EC", "PREC", "RAD", "TEMP", "CO", "NMVOC", "NOX", "O3","SO2", "NO2")]
+
 # Make the df a long format
 lf <- df7 %>%
   gather(variable, value,
@@ -120,7 +123,7 @@ tail(df1)
 df1_7 <- df1 %>% filter(datetime <= as.chron("01.04.2022", "%d.%m.%Y")) %>%
           filter(datetime >= as.chron("01.03.2022", "%d.%m.%Y"))
 
-
+df1_else <- df1%>% filter(datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y")) 
 
 df1_7 %>%
   filter(site=="LUG") %>%
@@ -132,4 +135,78 @@ df1_7 %>%
 
 plotWindrose(df1_7, spd = "WIGE", dir = "WIRI") +
   facet_grid(.~site)
+
+df1_else %>%
+  filter(site=="LUG") %>%
+  plotWindrose(spd = "WIGE", dir = "WIRI", decreasing=FALSE)
+
+df1_else %>%
+  filter(site=="RIG") %>%
+  plotWindrose(spd = "WIGE", dir = "WIRI", decreasing=FALSE)
+
+plotWindrose(df1_else, spd = "WIGE", dir = "WIRI") +
+  facet_grid(.~site)
+
+df1_before <- df1 %>% filter(datetime < as.chron("01.03.2022", "%d.%m.%Y")) %>%
+  filter(datetime >= as.chron("01.02.2022", "%d.%m.%Y"))
+
+plotWindrose(df1_before, spd = "WIGE", dir = "WIRI") +
+  facet_grid(.~site)
+
+
+df7_ttest_PM10 <- df7_all_month %>% gather(variable, value, c(PM10, PM2.5)) %>% filter(variable == "PM10")
+df7_ttest_PM2.5 <- df7_all_month %>% gather(variable, value, c(PM10, PM2.5)) %>% filter(variable == "PM2.5")
+
+
+(out_LUG_PM10 <- t.test(filter(df7_ttest_PM10, site=="LUG" & (datetime <= as.chron("01.04.2022", "%d.%m.%Y")& datetime >= as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+               filter(df7_ttest_PM10, site=="LUG" & (datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+               alternative="greater"))
+
+(out_RIG_PM10 <- t.test(filter(df7_ttest_PM10, site=="RIG" & (datetime <= as.chron("01.04.2022", "%d.%m.%Y")& datetime >= as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+               filter(df7_ttest_PM10, site=="RIG" & (datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+               alternative="greater"))
+
+(out_LUG_PM2.5 <- t.test(filter(df7_ttest_PM2.5, site=="LUG" & (datetime <= as.chron("01.04.2022", "%d.%m.%Y")& datetime >= as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+                        filter(df7_ttest_PM2.5, site=="LUG" & (datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+                        alternative="greater"))
+
+(out_RIG_PM2.5 <- t.test(filter(df7_ttest_PM2.5, site=="RIG" & (datetime <= as.chron("01.04.2022", "%d.%m.%Y")& datetime >= as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+                        filter(df7_ttest_PM2.5, site=="RIG" & (datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y")))[["value"]],
+                        alternative="greater"))
+
+library(lattice)
+
+CorrelationValue <- function(x, y, ...) {
+  correlation <- cor(x, y, use="pairwise.complete.obs") 
+  if(is.finite(correlation)) {
+    cpl <- current.panel.limits()
+    panel.text(mean(cpl$xlim), mean(cpl$ylim),
+               bquote(italic(r)==.(sprintf("%.2f", correlation))),
+               adj=c(0.5,0.5), col="blue")
+  }
+}
+
+df_apit <- df%>% filter(datetime <= as.chron("01.04.2022", "%d.%m.%Y")& datetime >= as.chron("01.03.2022", "%d.%m.%Y"))
+ix <- "RIG" == df_apit[["site"]]
+
+df_apot <- df%>% filter(datetime > as.chron("01.04.2022", "%d.%m.%Y")| datetime < as.chron("01.03.2022", "%d.%m.%Y"))
+ix <- "LUG" == df_apot[["site"]]
+
+pdf("rplot.pdf", width = 10, height = 10)
+# 2. Create the plot
+  splom(~df_apot[ix,c("O3","NO2","CO","PM10","PM2.5","TEMP", "SO2")],
+        upper.panel = CorrelationValue,
+        pch=4)
+# 3. Close the file
+dev.off()
+
+jpeg("rplot.jpeg", width = 700, height = 700)
+# 2. Create the plot
+splom(~df_apot[ix,c("O3","NO2","CO","PM10","PM2.5","TEMP", "SO2")],
+      upper.panel = CorrelationValue,
+      pch=4)
+# 3. Close the file
+dev.off()
+
+
 

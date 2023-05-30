@@ -126,41 +126,49 @@ pollutants <- pollutants[pollutants != "NMVOC"]
 hourly <- data.frame(site = "0", variable = "0", chi_p = 0, min_chi = 0, df = 0, ks = 0, ad=0, samples = 0)
 day <- data.frame(site = "0", variable = "0", chi_p = 0, min_chi = 0, df=0, ad = 0, samples = 0, adjust=0, alpha_adjust=0)
 
+i <- 0
 for (s in c("LUG", "RIG")){
-  for (pol in pollutants){
-    df1 <- july.hour %>% filter(variable == pol & site == s)
-    df2 <- july.day %>% filter(variable == pol & site == s)
-    
-    concvec <- c(na.omit(df1)[["value"]])
-    fit <- fitdist(ReplaceNonpositive(concvec), "lnorm")
-    fit_stats <- gofstat(fit)
-    hourly <- hourly %>% add_row(variable = pol, ks=fit_stats[["ks"]], chi_p = fit_stats[["chisqpvalue"]],
-                                   min_chi = min(fit_stats[["chisqtable"]][,1], na.rm = TRUE),
-                                 site=s, samples = nrow(df1), ad = fit_stats[["ad"]], df = fit_stats[["chisqdf"]])
-    
-    path <- paste("./QQ_plots/hourly_",s,"_",pol,".pdf", sep="")
-    pdf(file=path)
-      mytitle = paste(pol,"at",s)
-      plot(fit)
-    dev.off()
-    
-    concvec <- c(na.omit(df2)[["value"]])
-    fit <- fitdist(ReplaceNonpositive(concvec), "lnorm")
-    fit_stats <- gofstat(fit)
-    samps = nrow(df2)
-    k = 1+4/samps - 25/(samps^2)
-    
-    path <- paste("./QQ_plots/daily_",s,"_",pol,".pdf", sep="")
-      pdf(file=path)
-      mytitle = paste(pol,"at",s)
-      plot(fit)
-    dev.off()
-    
-    day <- day %>% add_row(variable = pol, ad=fit_stats[["ad"]], chi_p = fit_stats[["chisqpvalue"]],
-                                   min_chi = min(fit_stats[["chisqtable"]][,1], na.rm = TRUE),
-                           site = s, samples = samps, adjust=k, alpha_adjust = k*0.05, df = fit_stats[["chisqdf"]])
-    
+    path <- paste('./',s,'_hourly.pdf', sep='')
+    i <- i+1
+    pdf(path, width=5, height=10)
+    par(mfrow = c(7,2))
+    for (pol in pollutants){
+      df1 <- july.hour %>% filter(variable == pol & site == s)
+      concvec <- c(na.omit(df1)[["value"]])
+      fit <- fitdist(ReplaceNonpositive(concvec), "lnorm")
+      fit_stats <- gofstat(fit)
+      hourly <- hourly %>% add_row(variable = pol, ks=fit_stats[["ks"]], chi_p = fit_stats[["chisqpvalue"]],
+                                     min_chi = min(fit_stats[["chisqtable"]][,1], na.rm = TRUE),
+                                   site=s, samples = nrow(df1), ad = fit_stats[["ad"]], df = fit_stats[["chisqdf"]])
+      
+      # path <- paste("./QQ_plots/hourly_",s,"_",pol,".pdf", sep="")
+      # pdf(file=path)
+      #   mytitle = paste(pol,"at",s)
+      #   plot(fit)
+      # dev.off()
+      denscomp(fit,main=paste('Emp. and Theo. Density\nFor', pol))
+      qqcomp(fit, main = paste('Q-Q Plot For', pol))
+      
+      
+      # concvec <- c(na.omit(df2)[["value"]])
+      # fit <- fitdist(ReplaceNonpositive(concvec), "lnorm")
+      # fit_stats <- gofstat(fit)
+      # samps = nrow(df2)
+      # k = 1+4/samps - 25/(samps^2)
+      
+      # path <- paste("./QQ_plots/daily_",s,"_",pol,".pdf", sep="")
+      #   pdf(file=path)
+      #   mytitle = paste(pol,"at",s)
+      #   plot(fit)
+      # dev.off()
+      
+      # day <- day %>% add_row(variable = pol, ad=fit_stats[["ad"]], chi_p = fit_stats[["chisqpvalue"]],
+      #                                min_chi = min(fit_stats[["chisqtable"]][,1], na.rm = TRUE),
+      #                        site = s, samples = samps, adjust=k, alpha_adjust = k*0.05, df = fit_stats[["chisqdf"]])
+      # 
   }
+  dev.off()
+  
 }
 write.csv(hourly, './hourly_dist.csv')
 write.csv(day, './daily_dist.csv')
